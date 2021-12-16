@@ -69,6 +69,7 @@ typedef struct elf32_sym{
   unsigned char	st_info;
   unsigned char	st_other;
   Elf32_Half	st_shndx;
+  elf32_sym(){};
 } Elf32_Sym;
 
 #endif // H_ELF

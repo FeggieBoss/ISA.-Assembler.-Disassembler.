@@ -11,10 +11,11 @@ section_t Elf_parser::get_text_section() {
 }
 
 void Elf_parser::load_memory_map() {
-    int open_fl = open(file_name.c_str(), O_RDONLY);
-    struct stat stata_;
-    fstat(open_fl, &stata_);
-    iterator_ = static_cast<uint8_t*>(mmap(NULL, stata_.st_size, PROT_READ, MAP_PRIVATE, open_fl, 0));
+    iterator_ = fopen(file_name.c_str(), "rb");
+    //int open_fl = open(file_name.c_str(), O_RDONLY);
+    //struct stat stata_;
+    //fstat(open_fl, &stata_);
+    //iterator_ = static_cast<uint8_t*>(mmap(NULL, stata_.st_size, PROT_READ, MAP_PRIVATE, open_fl, 0));
 }
 
 std::string Elf_parser::get_section_type(int number) {
@@ -27,24 +28,39 @@ std::string Elf_parser::get_section_type(int number) {
     return "";
 }
 
+char buffer[1000];
 std::vector<section_t> Elf_parser::get_sections() {
-    Elf32_Ehdr *ehdr = (Elf32_Ehdr*)iterator_;
-    Elf32_Shdr *shdr = (Elf32_Shdr*)(iterator_ + ehdr->e_shoff);
-    Elf32_Shdr *sh_strtab = &shdr[ehdr->e_shstrndx];
+    Elf32_Ehdr ehdr; 
+    fseek(iterator_, 0, SEEK_SET);
+    auto r = fread(&ehdr, sizeof(Elf32_Ehdr), 1, iterator_);
+
+    Elf32_Shdr sh_strtab;
+    fseek(iterator_, ehdr.e_shoff + (ehdr.e_shstrndx)*sizeof(Elf32_Shdr), SEEK_SET);
+    r = fread(&sh_strtab, sizeof(Elf32_Shdr), 1, iterator_);
 
     std::vector<section_t> sections;
-    for (size_t i = 0; i < ehdr->e_shnum; ++i) {
-        section_t section;
-        section.section_number = i;
-        section.section_name = std::string(((char*)iterator_ + sh_strtab->sh_offset) + shdr[i].sh_name);
-        section.section_type = get_section_type(shdr[i].sh_type);
-        section.section_address = shdr[i].sh_addr;
-        section.section_offset = shdr[i].sh_offset;
-        section.section_size = shdr[i].sh_size;
-        section.section_esize = shdr[i].sh_entsize;
-        section.section_add_al = shdr[i].sh_addralign; 
+    for (size_t i = 0; i < ehdr.e_shnum; ++i) {
+        Elf32_Shdr shdr; 
+        fseek(iterator_, ehdr.e_shoff + i*sizeof(Elf32_Shdr), SEEK_SET);
+        r = fread(&shdr, sizeof(Elf32_Shdr), 1, iterator_);
+        
+        fseek(iterator_, sh_strtab.sh_offset + shdr.sh_name, SEEK_SET);
+        r = fscanf(iterator_, "%s", buffer);
+
+        section_t section = section_t(
+            i, 
+            shdr.sh_offset,
+            shdr.sh_addr,
+            shdr.sh_size,
+            shdr.sh_entsize,
+            shdr.sh_addralign,
+            std::string(buffer),
+            get_section_type(shdr.sh_type)            
+        );
         sections.push_back(section);
     }
+    if(r){};
+
     return sections;
 }
 
@@ -112,20 +128,23 @@ std::string Elf_parser::get_symbol_type(int sym_type_number) {
 
 std::vector<symbol_t> Elf_parser::get_symbols() {
     std::vector<section_t> all_sections = get_sections();
-    char *strtab_pointer = nullptr;
-    char *dynstr_pointer = nullptr;
+    size_t strtab_offset=-1;
+    size_t dynstr_offset=-1; 
+
+
+    //std::cout<<std::string(buffer)<<" "<<get_section_type(shdr.sh_type)<<'\n';
 
     for(auto &el: all_sections) {
         if(el.section_type == ".strtab" && 
            el.section_name == ".dynstr") {
-            dynstr_pointer = (char*)iterator_ + el.section_offset;
+            dynstr_offset = el.section_offset;
             break;
         }
     }
     for(auto &el: all_sections) {
         if(el.section_type == ".strtab" && 
            el.section_name == ".strtab") {
-            strtab_pointer = (char*)iterator_ + el.section_offset;
+            strtab_offset = el.section_offset;
             break;
         }
     }
@@ -135,20 +154,35 @@ std::vector<symbol_t> Elf_parser::get_symbols() {
         if(el.section_type != ".symtab" && 
            el.section_type != ".dynsym")
             continue;
-
-        auto info = (Elf32_Sym*)(iterator_ + el.section_offset);
+        size_t r;
         for (size_t i = 0; i < el.section_size / sizeof(Elf32_Sym); ++i) {
+            Elf32_Sym info;
+            fseek(iterator_, el.section_offset + i*sizeof(Elf32_Sym), SEEK_SET);
+            r = fread(&info, sizeof(Elf32_Sym), 1, iterator_);
+
             symbol_t symbol = symbol_t(
-                i, info[i].st_value, info[i].st_size,
-                get_symbol_type(info[i].st_info),
-                get_symbol_bind(info[i].st_info),
-                get_symbol_visibility(info[i].st_other),
-                get_symbol_index(info[i].st_shndx),
+                i, 
+                info.st_value, 
+                info.st_size,
+                get_symbol_type(info.st_info),
+                get_symbol_bind(info.st_info),
+                get_symbol_visibility(info.st_other),
+                get_symbol_index(info.st_shndx),
                 ""
             );
-            if(el.section_type == ".symtab") symbol.symbol_name = std::string(strtab_pointer + info[i].st_name);
-            if(el.section_type == ".dynsym") symbol.symbol_name = std::string(dynstr_pointer + info[i].st_name);
-            
+            if(el.section_type == ".symtab") {
+                fseek(iterator_, strtab_offset + info.st_name, SEEK_SET);
+                r = fscanf(iterator_, "%s", buffer);
+                symbol.symbol_name = std::string(buffer);
+                //symbol.symbol_name = std::string(strtab_pointer + info[i].st_name);
+            }
+            if(el.section_type == ".dynsym") {
+                fseek(iterator_, dynstr_offset + info.st_name, SEEK_SET);
+                r = fscanf(iterator_, "%s", buffer);
+                symbol.symbol_name = std::string(buffer);
+                //symbol.symbol_name = std::string(dynstr_pointer + info[i].st_name);
+            }       
+            if(r){}     
             symbols.push_back(symbol);
         }
     }

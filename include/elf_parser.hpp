@@ -4,14 +4,14 @@
 
 #include <elf.hpp>  
 
-#include <sys/stat.h> 
-#include <sys/mman.h>
-#include <fcntl.h>
+//#include <sys/stat.h> 
+//#include <sys/mman.h>
+//#include <fcntl.h>
 
 #include <string>
 #include <vector>
 
-typedef struct {
+struct section_t {
     int32_t section_number = 0; 
     int32_t section_offset;
     int32_t section_address;
@@ -20,7 +20,25 @@ typedef struct {
     int32_t section_add_al;
     std::string section_name;
     std::string section_type; 
-} section_t;
+    section_t(int32_t arg1, 
+               int32_t arg2,
+               int32_t arg3,
+               int32_t arg4,
+               int32_t arg5, 
+               int32_t arg6,
+               std::string arg7, 
+               std::string arg8) {
+        section_number = arg1; 
+        section_offset = arg2;
+        section_address = arg3;
+        section_size = arg4;
+        section_esize = arg5;
+        section_add_al = arg6;
+        section_name = arg7;
+        section_type = arg8; 
+    };
+    section_t(){}
+};
 
 typedef struct symbol_t_struct {
     int32_t symbol_number = 0;
@@ -59,7 +77,10 @@ public:
     std::vector<section_t> get_sections();
     std::vector<symbol_t> get_symbols();
     section_t get_text_section();
-    uint8_t *iterator_;
+    FILE *iterator_;
+    ~Elf_parser() {
+        fclose(iterator_);
+    }
 private:
     void load_memory_map();
     

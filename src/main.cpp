@@ -28,10 +28,13 @@ int main(int argc, char* argv[]) {
     FILE *pfile = fopen(argv[1], "rb");
     fseek(pfile, text.section_offset, SEEK_SET);
 
-    int32_t address = ((Elf32_Ehdr *) elf_parser.iterator_) -> e_entry;
+    Elf32_Ehdr ehdr; 
+    fseek(elf_parser.iterator_, 0, SEEK_SET);
+    size_t result = fread(&ehdr, sizeof(Elf32_Ehdr), 1, elf_parser.iterator_);
+    int32_t address = ehdr.e_entry;
     size_t already_read = 0;
     while (already_read < (size_t)text.section_size) {
-        size_t result = fread(buffer,1,2,pfile);
+        result = fread(buffer,1,2,pfile);
         if (result != 2) break;
 
         auto maybe_symb_name = get_symbol_name(symtab, address);
