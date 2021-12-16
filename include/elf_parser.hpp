@@ -3,11 +3,6 @@
 #define H_ELF_PARSER
 
 #include <elf.hpp>  
-
-//#include <sys/stat.h> 
-//#include <sys/mman.h>
-//#include <fcntl.h>
-
 #include <string>
 #include <vector>
 

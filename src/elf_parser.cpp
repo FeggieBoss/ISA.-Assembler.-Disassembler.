@@ -12,10 +12,6 @@ section_t Elf_parser::get_text_section() {
 
 void Elf_parser::load_memory_map() {
     iterator_ = fopen(file_name.c_str(), "rb");
-    //int open_fl = open(file_name.c_str(), O_RDONLY);
-    //struct stat stata_;
-    //fstat(open_fl, &stata_);
-    //iterator_ = static_cast<uint8_t*>(mmap(NULL, stata_.st_size, PROT_READ, MAP_PRIVATE, open_fl, 0));
 }
 
 std::string Elf_parser::get_section_type(int number) {
@@ -131,9 +127,6 @@ std::vector<symbol_t> Elf_parser::get_symbols() {
     size_t strtab_offset=-1;
     size_t dynstr_offset=-1; 
 
-
-    //std::cout<<std::string(buffer)<<" "<<get_section_type(shdr.sh_type)<<'\n';
-
     for(auto &el: all_sections) {
         if(el.section_type == ".strtab" && 
            el.section_name == ".dynstr") {
@@ -174,13 +167,11 @@ std::vector<symbol_t> Elf_parser::get_symbols() {
                 fseek(iterator_, strtab_offset + info.st_name, SEEK_SET);
                 r = fscanf(iterator_, "%s", buffer);
                 symbol.symbol_name = std::string(buffer);
-                //symbol.symbol_name = std::string(strtab_pointer + info[i].st_name);
             }
             if(el.section_type == ".dynsym") {
                 fseek(iterator_, dynstr_offset + info.st_name, SEEK_SET);
                 r = fscanf(iterator_, "%s", buffer);
                 symbol.symbol_name = std::string(buffer);
-                //symbol.symbol_name = std::string(dynstr_pointer + info[i].st_name);
             }       
             if(r){}     
             symbols.push_back(symbol);

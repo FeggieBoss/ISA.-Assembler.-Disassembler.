@@ -23,7 +23,6 @@ int main(int argc, char* argv[]) {
 
     disassembler_printer dis_printer = disassembler_printer(argv[2]);
     dis_printer.print_text_head();
-    //std::cout<<".text\n";
 
     FILE *pfile = fopen(argv[1], "rb");
     fseek(pfile, text.section_offset, SEEK_SET);
@@ -138,7 +137,6 @@ int main(int argc, char* argv[]) {
                                + bitstring_to_register(bits, 21, 30, 1)
                                + bitstring_to_register(bits, 31, 31, 20);
 
-                    //printf("JAl %s, %d\n", rd.c_str(), offset);
                     if(fl)
                         dis_printer.print_xxssd(address, "JAl", rd, offset);
                     else
@@ -151,7 +149,6 @@ int main(int argc, char* argv[]) {
                         dis_printer.print_xxsssd(address, "JALR", rd, rs1, offset);
                     else
                         dis_printer.print_xssssd(address, symb_name, "JALR", rd, rs1, offset);
-                    //printf("JAlR %s, %s, %d\n", rd.c_str(), rs1.c_str(), offset);
                 }
                 else if(opcode == "1100011") { // B*
                     int offset = - bitstring_to_register(bits, 7, 7, 0) * ((int32_t)1<<11)
@@ -177,7 +174,6 @@ int main(int argc, char* argv[]) {
                         dis_printer.print_xxsssd(address, cmd, rs1, rs2, offset);
                     else
                         dis_printer.print_xssssd(address, symb_name, cmd, rs1, rs2, offset);
-                    //printf("%s %s, %s, %d\n", cmd.c_str(), rs1.c_str(), rs2.c_str(), offset);
                 }
                 else if(opcode == "0000011") { // L*
                     int offset = bitstring_to_register(bits, 20, 30, 0)
@@ -199,7 +195,6 @@ int main(int argc, char* argv[]) {
                         dis_printer.print_xxssds(address, cmd, rd, offset, rs1);
                     else
                         dis_printer.print_xsssds(address, symb_name, cmd, rd, offset, rs1);
-                    //printf("%s %s, %d(%s)\n", cmd.c_str(), rd.c_str(), offset, rs1.c_str());
                 }
                 else if(opcode == "0100011") { // S*
                     int offset = bitstring_to_register(bits, 7, 11, 0)
@@ -218,7 +213,6 @@ int main(int argc, char* argv[]) {
                         dis_printer.print_xxssds(address, cmd, rs2, offset, rs1);
                     else
                         dis_printer.print_xsssds(address, symb_name, cmd, rs2, offset, rs1);
-                    //printf("%s %s, %d(%s)\n", cmd.c_str(), rs2.c_str(), offset, rs1.c_str());
                 }
                 else if(opcode == "0010011") { // Logic
                     int imm = bitstring_to_register(bits, 20, 30, 0)
@@ -252,8 +246,6 @@ int main(int argc, char* argv[]) {
                         dis_printer.print_xxsssd(address, cmd, rd, rs1, imm);
                     else
                         dis_printer.print_xssssd(address, symb_name, cmd, rd, rs1, imm);
-
-                    //printf("%s %s, %s, %d\n", cmd.c_str(), rd.c_str(), rs1.c_str(), imm);
                 }
                 else if(opcode == "0001111") { // FENCE*
                     // не обрабатываем
@@ -284,7 +276,6 @@ int main(int argc, char* argv[]) {
         exit (-1);
     }
 
-    //std::cout<<"\n.symtab\n";
     dis_printer.print_symtab_head();
     dis_printer.print_symbols(symtab);
 
